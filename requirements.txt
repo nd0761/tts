@@ -1,0 +1,10 @@
+librosa
+torchaudio~=0.10.0
+torch~=1.10.0
+numpy
+tqdm
+matplotlib
+pandas
+ipython
+dataclasses
+typing
