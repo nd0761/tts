@@ -8,3 +8,4 @@ pandas
 ipython
 dataclasses
 typing
+wandb

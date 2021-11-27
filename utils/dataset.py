@@ -7,6 +7,8 @@ from typing import Tuple, Optional, List
 from torch.nn.utils.rnn import pad_sequence
 from dataclasses import dataclass
 
+import pandas as pd
+
 
 class LJSpeechDataset(torchaudio.datasets.LJSPEECH):
 
