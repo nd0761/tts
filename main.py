@@ -82,10 +82,14 @@ def main_worker(model_path):
                     batch.transcript
                 )
 
-            duration_predict, melspec_predict = model(batch)
+            duration_predict, melspec_predict = model(batch, melspec)
             reconstructed_wav = vocoder.inference(melspec_predict).cpu()
             display.display(display.Audio(reconstructed_wav, rate=22050))
-            wandb.log({"result": display.display(display.Audio(reconstructed_wav, rate=22050))})
+            tmp_path = "/content/temp.wav"
+            with open(tmp_path, "wb") as f:
+                f.write(display.Audio(reconstructed_wav, rate=22050).data)
+            wandb.log({"result_audio": wandb.Audio(tmp_path, sample_rate=22050)})
+            # wandb.log({"result": display.display(display.Audio(reconstructed_wav, rate=22050))})
             break
 
     wandb_session.finish()

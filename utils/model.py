@@ -28,9 +28,9 @@ class FastSpeech(nn.Module):
             config_output_linear.mels
         )
 
-    def forward(self, batch: Batch):
+    def forward(self, batch: Batch, melspec=None):
         x = self.encoder(batch.tokens)
-        x, lengths = self.length_regulator(x, batch.durations)
+        x, lengths = self.length_regulator(x, batch.durations, melspec=melspec)
         x = self.decoder(x)
 
         return lengths, self.output_linear(x).transpose(-2, -1)

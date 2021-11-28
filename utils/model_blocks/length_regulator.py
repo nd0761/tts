@@ -12,29 +12,38 @@ class LengthRegulator(nn.Module):
         self.config = config
         self.duration_pred = DurationPredict(config)
 
-    def forward(self, x, target=None):
-        reg_len = self.duration_pred(x)
+    def LR(self, x, predicted_len):
+        batch_size = predicted_len.shape[0]
+        seq_len = predicted_len.shape[-1]
 
-        if target is None:
-            target = reg_len
-        max_len = round(target.exp().sum(axis=-1).max().item())
-
-        batch, seq_len = x.shape[0], x.shape[1]
-
-        mask = torch.zeros((batch, seq_len, max_len))
-        for i in range(batch):
+        expand_max_len = round(predicted_len.sum(-1).max().item())
+        mask = torch.zeros(batch_size, seq_len, expand_max_len)
+        for i in range(batch_size):
             start = 0
             finish = 0
             for j in range(seq_len):
-                diff = round(target[i][j].item())
+                diff = round(predicted_len[i][j].item())
                 finish += diff
-                mask[i, j, start: finish] = 1
+                mask[i, j, start:finish] = 1
                 start += diff
         mask = mask.to(self.config.device)
-        x = x.transpose(-2, -1)
-        x = x @ mask
 
-        return x.transpose(-2, -1), reg_len
+        output = (x.transpose(-2, -1)) @ mask
+
+        return output
+
+    def forward(self, x, target=None, melspec=None):
+        alpha = 1.0,
+        predicted_len = self.duration_pred(x)
+
+        if target is not None:
+            target = target * melspec.shape[-1]
+        else:
+            # TODO
+            target = ((predicted_len + 0.5) * alpha)
+        output = self.LR(x, target).transpose(-2, -1)
+
+        return output, predicted_len
 
 
 class DurationPredict(nn.Module):

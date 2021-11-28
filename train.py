@@ -20,7 +20,7 @@ def train_epoch(
             batch.durations = aligner(batch.waveform, batch.waveform_length, batch.transcript).to(config.device)
 
         opt.zero_grad()
-        duration_predict, melspec_predict = model(batch)
+        duration_predict, melspec_predict = model(batch, melspec)
 
         duration_loss, melspec_loss = loss_fn(
             batch.durations, duration_predict,
@@ -64,7 +64,7 @@ def validation(
                 batch.transcript
             ).to(config.device)
 
-        duration_predict, melspec_predict = model(batch)
+        duration_predict, melspec_predict = model(batch, melspec)
 
         duration_loss, melspec_loss = loss_fn(
             batch.durations, duration_predict,
