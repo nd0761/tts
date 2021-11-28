@@ -1,6 +1,8 @@
 import torchaudio
 import torch
 
+from utils.featurizer import MelSpectrogramConfig
+
 
 from typing import Tuple, Optional, List
 
@@ -45,12 +47,16 @@ class Batch:
     tokens: torch.Tensor
     token_lengths: torch.Tensor
     durations: Optional[torch.Tensor] = None
+    mel_lengths: Optional[torch.Tensor] = None
 
     def to(self, device: torch.device, non_blocking=False) -> 'Batch':
         self.waveform = self.waveform.to(device, non_blocking=non_blocking)
         self.tokens = self.tokens.to(device, non_blocking=non_blocking)
 
         return self
+
+    def get_real_durations(self):
+        return self.waveform_length // (MelSpectrogramConfig().hop_length)
 
 
 class LJSpeechCollator:

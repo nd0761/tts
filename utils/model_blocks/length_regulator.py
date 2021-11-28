@@ -32,14 +32,13 @@ class LengthRegulator(nn.Module):
 
         return output
 
-    def forward(self, x, target=None, melspec=None):
+    def forward(self, x, target=None):
         alpha = 1.0,
         predicted_len = self.duration_pred(x)
 
         if target is not None:
-            target = target * melspec.shape[-1]
+            target = target
         else:
-            # TODO
             target = ((predicted_len + 0.5) * alpha)
         output = self.LR(x, target).transpose(-2, -1)
 
