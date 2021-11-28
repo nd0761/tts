@@ -17,18 +17,19 @@ class LengthRegulator(nn.Module):
 
         if target is None:
             target = reg_len
-        real_len = target
-        # real_len = real_len.detach().cpu().numpy()
-        max_len = int(target.exp().sum(axis=-1).max())
+        max_len = round(target.exp().sum(axis=-1).max().item())
 
         batch, seq_len = x.shape[0], x.shape[1]
 
         mask = torch.zeros((batch, seq_len, max_len))
         for i in range(batch):
-            cur_length = 0
+            start = 0
+            finish = 0
             for j in range(seq_len):
-                mask[i, j, cur_length: cur_length + real_len[i][j]] = 1
-                cur_length += real_len[i][j]
+                diff = round(target[i][j].item())
+                finish += diff
+                mask[i, j, start: finish] = 1
+                start += diff
         mask = mask.to(self.config.device)
         x = x.transpose(-2, -1)
         x = x @ mask
