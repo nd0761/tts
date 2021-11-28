@@ -16,9 +16,9 @@ class FFTBlock(nn.Module):
         )
         self.conv_net = nn.Sequential(
             *[
-                nn.Conv1d(in_features, filter_size, kernel_size),
+                nn.Conv1d(in_features, filter_size, kernel_size, padding=kernel_size//2),
                 nn.ReLU(),
-                nn.Conv1d(filter_size, out_features, kernel_size),
+                nn.Conv1d(filter_size, out_features, kernel_size, padding=kernel_size//2),
                 nn.ReLU()
             ]
         )
@@ -29,12 +29,15 @@ class FFTBlock(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, mask=None):
-        attention_x = self.atten(x, x, x, attn_mask=mask)
+        attention_x = self.atten(x, x, x, mask=mask)
 
         x = x + self.dropout(attention_x)
         x = self.norm1(x)
+        x = x.transpose(-2, -1)
 
         conv_x = self.conv_net(x)
         x = x + self.dropout(conv_x)
+        x = x.transpose(-2, -1)
+
 
         return self.norm2(x)

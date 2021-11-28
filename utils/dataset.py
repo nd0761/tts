@@ -9,6 +9,8 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from utils.config import TaskConfig
+
 
 class LJSpeechDataset(torchaudio.datasets.LJSPEECH):
 
@@ -44,8 +46,11 @@ class Batch:
     token_lengths: torch.Tensor
     durations: Optional[torch.Tensor] = None
 
-    def to(self, device: torch.device) -> 'Batch':
-        raise NotImplementedError
+    def to(self, device: torch.device, non_blocking=False) -> 'Batch':
+        self.waveform = self.waveform.to(device, non_blocking=non_blocking)
+        self.tokens = self.tokens.to(device, non_blocking=non_blocking)
+
+        return self
 
 
 class LJSpeechCollator:

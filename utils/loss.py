@@ -12,4 +12,4 @@ class Loss(nn.Module):
         melspec_sl = melspec[:, :, :length]
         melspec_predict_sl = melspec_predict[:, :, :length]
 
-        return self.length_mse(duration.exp(), duration_predict.exp()), self.mel_spec_mse(melspec_sl, melspec_predict_sl)
+        return self.len_mse(duration, duration_predict), self.mel_mse(melspec_sl, melspec_predict_sl)

@@ -29,7 +29,7 @@ class Encoder(nn.Module):
         # batch_size, max_len = phonem.shape[0], phonem.shape[1]
 
         # x = self.phonem_emb(phonem) + self.position_enc[:, :max_len, :].expand(batch_size, -1, -1)
-
-        out = self.FFTs(self.phonem_emb(phonem))
+        phonem_emb = self.phonem_emb(phonem)
+        out = self.FFTs(phonem_emb)
 
         return out

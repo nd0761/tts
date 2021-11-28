@@ -13,11 +13,11 @@ def train_epoch(
 ):
     model.train()
     for i, batch in tqdm(enumerate(loader), total=len(loader)):
-        batch  = batch.to(config.device)
+        batch = batch.to(config.device)
 
         melspec = featurizer(batch.waveform)
         with torch.no_grad():
-            batch.durations = aligner(batch.waveform, batch.waveforn_length, batch.transcript)
+            batch.durations = aligner(batch.waveform, batch.waveform_length, batch.transcript).to(config.device)
 
         opt.zero_grad()
         duration_predict, melspec_predict = model(batch)
@@ -34,9 +34,9 @@ def train_epoch(
         # logging
         if config.wandb:
             wandb_session.log({
-                "train.duration_loss": duration_loss.detach().numpy(),
-                "train.melspec_loss": melspec_loss.detach().numpy(),
-                "train.loss": loss.detach().numpy()
+                "train.duration_loss": duration_loss.detach().cpu().numpy(),
+                "train.melspec_loss": melspec_loss.detach().cpu().numpy(),
+                "train.loss": loss.detach().cpu().numpy()
             })
         if config.one_batch:
             break
@@ -53,15 +53,16 @@ def validation(
 
     duration_losses, melspec_losses = [], []
     val_losses = []
-    for i, batch in tqdm(enumerate(loader)):
+    for i, batch in tqdm(enumerate(loader), total=len(loader)):
         batch = batch.to(config.device)
+
         melspec = featurizer(batch.waveform)
         with torch.no_grad():
             batch.durations = aligner(
                 batch.waveform,
-                batch.waveforn_length,
+                batch.waveform_length,
                 batch.transcript
-            )
+            ).to(config.device)
 
         duration_predict, melspec_predict = model(batch)
 
@@ -71,16 +72,12 @@ def validation(
         )
         loss = duration_loss + melspec_loss
 
-        duration_losses.append(duration_loss.detach().numpy())
-        melspec_losses.append(melspec_loss.detach().numpy())
-        val_losses.append(loss.detach().numpy())
-
         # logging
         if config.wandb:
             wandb_session.log({
-                "val.duration_loss": duration_loss.detach().numpy(),
-                "val.melspec_loss": melspec_loss.detach().numpy(),
-                "vall.loss": loss.detach().numpy()
+                "val.duration_loss": duration_loss.detach().cpu().numpy(),
+                "val.melspec_loss": melspec_loss.detach().cpu().numpy(),
+                "vall.loss": loss.detach().cpu().numpy()
             })
     return duration_losses, melspec_losses, val_losses
 
@@ -97,7 +94,7 @@ def train(
 
         duration_losses, melspec_losses, val_losses = validation(
             model, val_loader,
-            Loss(), featurizer,
+            Loss(), featurizer, aligner,
             config, wandb_session
         )
 

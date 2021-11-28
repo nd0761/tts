@@ -12,14 +12,14 @@ class LengthRegulator(nn.Module):
         self.config = config
         self.duration_pred = DurationPredict(config)
 
-    def forward(self, x, target):
+    def forward(self, x, target=None):
         reg_len = self.duration_pred(x)
 
         if target is None:
             target = reg_len
-        real_len = target.astype(int)
-        real_len = real_len.detach().cpu().numpy()
-        max_len = real_len.sum(axis=-1).max()
+        real_len = target
+        # real_len = real_len.detach().cpu().numpy()
+        max_len = int(target.exp().sum(axis=-1).max())
 
         batch, seq_len = x.shape[0], x.shape[1]
 
@@ -29,8 +29,9 @@ class LengthRegulator(nn.Module):
             for j in range(seq_len):
                 mask[i, j, cur_length: cur_length + real_len[i][j]] = 1
                 cur_length += real_len[i][j]
-
-        x = (x.transpose(-2, -1)).dot(mask)
+        mask = mask.to(self.config.device)
+        x = x.transpose(-2, -1)
+        x = x @ mask
 
         return x.transpose(-2, -1), reg_len
 

@@ -35,11 +35,12 @@ def main_worker(model_path):
 
     print("initialize model")
     model = FastSpeech()
+    model.to(config.device)
 
     print("initialize featurizer")
-    featurizer = MelSpectrogram(MelSpectrogramConfig())
+    featurizer = MelSpectrogram(MelSpectrogramConfig()).to(config.device)
     print("initialize aligner")
-    aligner = GraphemeAligner().to(config.device)
+    aligner = GraphemeAligner().to(config.device).to(config.device)
     print("initialize optimizer")
     opt = AdamW(
         model.parameters(),
@@ -54,7 +55,7 @@ def main_worker(model_path):
     wandb_session = wandb.init(project="tts-one-batch", entity="nd0761")
     wandb.config = config.__dict__
 
-    train_loader = next(iter(dataloader))
+    train_loader = [next(iter(dataloader))]
     val_loader = copy.deepcopy(train_loader)
 
     print("start train procedure")
@@ -77,7 +78,7 @@ def main_worker(model_path):
             with torch.no_grad():
                 batch.durations = aligner(
                     batch.waveform,
-                    batch.waveforn_length,
+                    batch.waveform_length,
                     batch.transcript
                 )
 
@@ -86,6 +87,8 @@ def main_worker(model_path):
             display.display(display.Audio(reconstructed_wav, rate=22050))
             wandb.log({"result": display.display(display.Audio(reconstructed_wav, rate=22050))})
             break
+
+    wandb_session.finish()
 
 
 if __name__ == "__main__":

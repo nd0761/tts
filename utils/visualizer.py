@@ -4,11 +4,11 @@ from IPython import display
 def visualize(dummy_batch):
     index = 0
 
-    waveform = dummy_batch.waveform[index][:dummy_batch.waveforn_length[index]]
+    waveform = dummy_batch.waveform[index][:dummy_batch.waveform_length[index]]
     durations = dummy_batch.durations[index][:dummy_batch.token_lengths[index]]
 
     # scale by waveform domain
-    durations = durations * dummy_batch.waveforn_length[index]
+    durations = durations * dummy_batch.waveform_length[index]
     durations = durations.cumsum(dim=0).int()
 
     print(dummy_batch.transcript[index])
