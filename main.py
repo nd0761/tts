@@ -24,7 +24,6 @@ from IPython import display
 def main_worker(model_path):
     print("set torch seed")
     config = TaskConfig()
-    config.batch_size = 3
     torch.manual_seed(config.torch_seed)
 
     print("initialize dataset")
