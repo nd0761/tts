@@ -18,6 +18,10 @@ class FastSpeech(nn.Module):
             config_output_linear=TaskConfig()
     ):
         super(FastSpeech, self).__init__()
+        self.config_encoder = config_encoder
+        self.config_length_regulator = config_length_regulator
+        self.config_decoder = config_decoder
+        self.config_output_linear = config_output_linear
 
         self.encoder = Encoder(config_encoder)
         self.length_regulator = LengthRegulator(config_length_regulator)
@@ -30,7 +34,9 @@ class FastSpeech(nn.Module):
 
     def forward(self, batch: Batch, melspec=None):
         x = self.encoder(batch.tokens)
-        x, lengths = self.length_regulator(x, batch.get_real_durations(), melspec=melspec)
+        # print(batch.get_real_durations())
+        # print(batch.durations)
+        x, lengths = self.length_regulator(x, batch.real_durations, melspec=melspec)
         x = self.decoder(x)
 
         return lengths, self.output_linear(x).transpose(-2, -1)

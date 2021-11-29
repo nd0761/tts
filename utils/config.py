@@ -4,6 +4,7 @@ import dataclasses
 
 @dataclasses.dataclass
 class TaskConfig:
+    work_dir: str = "/content/"  # because we work with colab
     one_batch: bool = True
     PAD_IDX: int = 0
 
@@ -47,4 +48,7 @@ class TaskConfig:
     device: torch.device = torch.device(
         'cuda:0' if torch.cuda.is_available() else 'cpu')
     wandb_api: str = "99f2c4dae0db3099861ebd92a63e1194f42d16d9"
+    log_audio: bool = True
+    laep: int = 25
+    log_final_audio: bool = True
     wandb: bool = True

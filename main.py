@@ -13,6 +13,8 @@ from utils.dataset import LJSpeechDataset, LJSpeechCollator
 from utils.aligner import GraphemeAligner
 from utils.vcoder import Vocoder
 
+from utils.wandb_audio import log_audio
+
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import ExponentialLR
@@ -22,11 +24,11 @@ from IPython import display
 def main_worker(model_path):
     print("set torch seed")
     config = TaskConfig()
-    config.batch_size = 1
+    config.batch_size = 3
     torch.manual_seed(config.torch_seed)
 
     print("initialize dataset")
-    dataset = LJSpeechDataset('/content/')
+    dataset = LJSpeechDataset(config.work_dir)
     dataloader = DataLoader(
         dataset,
         batch_size=config.batch_size,
@@ -60,16 +62,26 @@ def main_worker(model_path):
 
     print("start train procedure")
 
+    vocoder = None
+    if config.log_audio:
+        print("initialize vocoder")
+        vocoder = Vocoder().to(config.device).eval()
+
     train(
         model, opt, scheduler, train_loader, val_loader,
         featurizer, aligner,
         save_model=False, model_path=None,
-        config=config, wandb_session=wandb_session
+        config=config, wandb_session=wandb_session,
+        vocoder=vocoder
     )
 
+    if not config.log_final_audio:
+        wandb_session.finish()
+        return
     print("send result to wandb")
-    print("initialize vocoder")
-    vocoder = Vocoder().to(config.device).eval()
+    if vocoder is None:
+        print("initialize vocoder")
+        vocoder = Vocoder().to(config.device).eval()
     with torch.no_grad():
         model.eval()
         for batch in train_loader:
@@ -83,14 +95,13 @@ def main_worker(model_path):
                 )
 
             duration_predict, melspec_predict = model(batch, melspec)
-            reconstructed_wav = vocoder.inference(melspec_predict).cpu()
-            display.display(display.Audio(reconstructed_wav, rate=22050))
-            tmp_path = "/content/temp.wav"
-            with open(tmp_path, "wb") as f:
-                f.write(display.Audio(reconstructed_wav, rate=22050).data)
-            wandb.log({"result_audio": wandb.Audio(tmp_path, sample_rate=22050)})
-            # wandb.log({"result": display.display(display.Audio(reconstructed_wav, rate=22050))})
-            break
+
+            for i in range(melspec_predict.shape[0]):
+                reconstructed_wav = vocoder.inference(melspec_predict[i].unsqueeze(0)).cpu()
+                wav = display.Audio(reconstructed_wav, rate=22050)
+                tmp_path = config.work_dir + "temp" + str(i) + ".wav"
+                log_audio(wav, tmp_path, "result_audio " + str(i), False)
+                i += 1
 
     wandb_session.finish()
 
