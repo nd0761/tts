@@ -44,7 +44,7 @@ class TaskConfig:
     learning_rate: float = 3e-4
     weight_decay: float = 1e-5
 
-    num_epochs: int = 500
+    num_epochs: int = 1000
     device: torch.device = torch.device(
         'cuda:0' if torch.cuda.is_available() else 'cpu')
     wandb_api: str = "99f2c4dae0db3099861ebd92a63e1194f42d16d9"
