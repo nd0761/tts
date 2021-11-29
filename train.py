@@ -2,6 +2,7 @@ from utils.config import TaskConfig
 from utils.loss import Loss
 
 from utils.wandb_audio import log_audio
+import wandb
 
 import torch
 import torch.nn.functional as F
@@ -18,6 +19,7 @@ def train_epoch(
 ):
     model.train()
     melspec_predict = None
+    batch = None
     for i, batch in tqdm(enumerate(loader), total=len(loader)):
         batch = batch.to(config.device)
 
@@ -55,7 +57,10 @@ def train_epoch(
         reconstructed_wav = vocoder.inference(melspec_predict[0].unsqueeze(0)).cpu()
         wav = display.Audio(reconstructed_wav, rate=22050)
         tmp_path = config.work_dir + "temp" + str(epoch_num) + ".wav"
-        log_audio(wav, tmp_path, "train.audio_epoch_" + str(epoch_num))
+        log_audio(wandb_session, wav, tmp_path, "train.audio")
+        wandb_session.log({
+            "train.transcript": wandb.Html(batch.transcript[0]),
+        })
     scheduler.step()
 
 

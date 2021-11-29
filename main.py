@@ -103,7 +103,10 @@ def main_worker(model_path):
                 reconstructed_wav = vocoder.inference(melspec_predict[i].unsqueeze(0)).cpu()
                 wav = display.Audio(reconstructed_wav, rate=22050)
                 tmp_path = config.work_dir + "temp" + str(i) + ".wav"
-                log_audio(wav, tmp_path, "result_audio " + str(i), False)
+                log_audio(wandb_session, wav, tmp_path, "result.audio", False)
+                wandb_session.log({
+                    "result.transcript": wandb.Html(batch.transcript[i])
+                })
                 i += 1
 
     wandb_session.finish()
