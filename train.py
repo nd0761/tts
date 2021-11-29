@@ -115,6 +115,11 @@ def train(
                 Loss(), featurizer, aligner,
                 config, wandb_session,
                 vocoder, n)
+        else:
+            train_epoch(
+                model, opt, train_loader, scheduler,
+                Loss(), featurizer, aligner,
+                config, wandb_session)
 
         duration_losses, melspec_losses, val_losses = validation(
             model, val_loader,

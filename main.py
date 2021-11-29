@@ -91,7 +91,11 @@ def main_worker(model_path):
                     batch.waveform,
                     batch.waveform_length,
                     batch.transcript
-                )
+                ).to(config.device)
+            mel_lengths = batch.get_real_durations().to(config.device).unsqueeze(1)
+
+            # mel_lengths = mel_lengths.expand(mel_lengths.shape[0], batch.durations.shape[-1])
+            batch.real_durations = torch.mul(batch.durations, mel_lengths)
 
             duration_predict, melspec_predict = model(batch, melspec)
 
