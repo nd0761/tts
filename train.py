@@ -56,7 +56,7 @@ def train_epoch(
     if vocoder is not None and melspec_predict is not None:
         reconstructed_wav = vocoder.inference(melspec_predict[0].unsqueeze(0)).cpu()
         wav = display.Audio(reconstructed_wav, rate=22050)
-        gt_wav = display.Audio(batch.waveform[0], rate=22050)
+        gt_wav = display.Audio(batch.waveform[0].cpu(), rate=22050)
         tmp_path = config.work_dir + "temp" + str(epoch_num) + ".wav"
         log_audio(wandb_session, wav, tmp_path, "train.audio_predict")
         log_audio(wandb_session, gt_wav, tmp_path, "train.audio_original")
