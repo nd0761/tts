@@ -42,20 +42,20 @@ class TaskConfig:
 
     torch_seed: int = 42
 
-    batch_size: int = 3
+    batch_size: int = 1
 
     batch_limit: int = 1
 
     learning_rate: float = 3e-4
     weight_decay: float = 1e-5
 
-    num_epochs: int = 750
+    num_epochs: int = 100
     device: torch.device = torch.device(
         'cuda:0' if torch.cuda.is_available() else 'cpu')
     wandb_api: str = "99f2c4dae0db3099861ebd92a63e1194f42d16d9"
     log_audio: bool = True
-    laep: int = 100
-    laep_model: int = 100
-    laep_val: int = 10
+    laep: int = 1
+    laep_model: int = 1
+    laep_val: int = 1
     log_final_audio: bool = True
     wandb: bool = True

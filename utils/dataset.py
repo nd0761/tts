@@ -3,11 +3,11 @@ import torch
 
 from utils.featurizer import MelSpectrogramConfig
 
-
 from typing import Tuple, Optional, List
 
 from torch.nn.utils.rnn import pad_sequence
 from dataclasses import dataclass
+from torch.utils.data import Dataset
 
 import re
 
@@ -16,7 +16,7 @@ import pandas as pd
 from utils.config import TaskConfig
 
 
-class TestDataset:
+class TestDataset(Dataset):
     def __init__(self, file_path):
         super().__init__()
         with open(file_path, 'r') as f:
@@ -27,8 +27,7 @@ class TestDataset:
     def __getitem__(self, index: int):
         transcript = re.sub(r"[^a-zA-Z ,.]+", "", self.lines[index])
         tokens, token_lengths = self._tokenizer(transcript)
-
-        return transcript, tokens, token_lengths
+        return None, None, transcript, tokens, token_lengths
 
     def __len__(self):
         return self.lines_len
@@ -57,9 +56,6 @@ class LJSpeechDataset(torchaudio.datasets.LJSPEECH):
         tokens, token_lengths = self._tokenizer(transcript)
 
         return waveform, waveform_length, transcript, tokens, token_lengths
-
-    def __len__(self):
-        return len(self.sentences)
 
     def decode(self, tokens, lengths):
         result = []
@@ -110,3 +106,18 @@ class LJSpeechCollator:
         token_lengths = torch.cat(token_lengths)
 
         return Batch(waveform, waveform_length, transcript, tokens, token_lengths)
+
+
+class TestCollator:
+
+    def __call__(self, instances: List[Tuple]) -> Batch:
+        _, _, transcript, tokens, token_lengths = list(
+            zip(*instances)
+        )
+
+        tokens = pad_sequence([
+            tokens_[0] for tokens_ in tokens
+        ]).transpose(0, 1)
+        token_lengths = torch.cat(token_lengths)
+
+        return Batch(None, None, transcript, tokens, token_lengths)

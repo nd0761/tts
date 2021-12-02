@@ -9,7 +9,7 @@ from utils.config import TaskConfig
 from train import train
 from utils.model import FastSpeech
 from utils.featurizer import MelSpectrogramConfig, MelSpectrogram
-from utils.dataset import LJSpeechDataset, LJSpeechCollator, TestDataset
+from utils.dataset import LJSpeechDataset, LJSpeechCollator, TestDataset, TestCollator
 from utils.aligner import GraphemeAligner
 from utils.vcoder import Vocoder
 
@@ -39,7 +39,7 @@ def main_worker():
     test_loader = DataLoader(
         test_dataset,
         batch_size=config.batch_size,
-        collate_fn=LJSpeechCollator()
+        collate_fn=TestCollator()
     )
 
     val_loader = []
@@ -63,7 +63,7 @@ def main_worker():
 
     print("initialize wandb")
     # os.environ["WANDB_API_KEY"] = config.wandb_api
-    wandb_session = wandb.init(project="tts-one-batch", entity="nd0761")
+    wandb_session = wandb.init(project="tts-one-batch-1", entity="nd0761")
     wandb.config = config.__dict__
 
     # if config.one_batch:

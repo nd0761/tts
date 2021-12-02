@@ -39,7 +39,7 @@ class LengthRegulator(nn.Module):
         if target is not None:
             target = target
         else:
-            target = ((predicted_len + 0.5) * alpha)
+            target = predicted_len
         output = self.LR(x, target).transpose(-2, -1)
 
         return output, predicted_len
