@@ -9,3 +9,4 @@ ipython
 dataclasses
 typing
 wandb
+regex

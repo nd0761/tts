@@ -44,14 +44,7 @@ class TaskConfig:
 
     batch_size: int = 3
 
-    train_share: float = -1.
-
-    train_limit: int = 1
-    val_limit: int = 1
-
-    train_limit: int = 1
-    val_limit: int = 1
-
+    batch_limit: int = 1
 
     learning_rate: float = 3e-4
     weight_decay: float = 1e-5
@@ -63,5 +56,6 @@ class TaskConfig:
     log_audio: bool = True
     laep: int = 100
     laep_model: int = 100
+    laep_val: int = 10
     log_final_audio: bool = True
     wandb: bool = True

@@ -11,11 +11,23 @@ from tqdm import tqdm
 from IPython import display
 
 
+def log_wandb_audio(batch, config, wandb_session, vocoder, melspec_predict, log_type="train"):
+    reconstructed_wav = vocoder.inference(melspec_predict[0].unsqueeze(0)).cpu()
+    wav = display.Audio(reconstructed_wav, rate=22050)
+    gt_wav = display.Audio(batch.waveform[0].cpu(), rate=22050)
+    tmp_path = config.work_dir + "temp.wav"
+    log_audio(wandb_session, wav, tmp_path, log_type + ".audio_predict")
+    log_audio(wandb_session, gt_wav, tmp_path, log_type + ".audio_original")
+    wandb_session.log({
+        log_type + ".transcript": wandb.Html(batch.transcript[0]),
+    })
+
+
 def train_epoch(
         model, opt, loader, scheduler,
         loss_fn, featurizer, aligner,
         config=TaskConfig(), wandb_session=None,
-        vocoder=None, epoch_num=None
+        vocoder=None
 ):
     model.train()
     melspec_predict = None
@@ -23,6 +35,8 @@ def train_epoch(
 
     losses = []
     for i, batch in tqdm(enumerate(loader), total=len(loader)):
+        if i >= config.batch_limit:
+            break
         batch = batch.to(config.device)
 
         melspec = featurizer(batch.waveform)
@@ -57,15 +71,7 @@ def train_epoch(
         if config.one_batch:
             break
     if vocoder is not None and melspec_predict is not None:
-        reconstructed_wav = vocoder.inference(melspec_predict[0].unsqueeze(0)).cpu()
-        wav = display.Audio(reconstructed_wav, rate=22050)
-        gt_wav = display.Audio(batch.waveform[0].cpu(), rate=22050)
-        tmp_path = config.work_dir + "temp" + str(epoch_num) + ".wav"
-        log_audio(wandb_session, wav, tmp_path, "train.audio_predict")
-        log_audio(wandb_session, gt_wav, tmp_path, "train.audio_original")
-        wandb_session.log({
-            "train.transcript": wandb.Html(batch.transcript[0]),
-        })
+        log_wandb_audio(batch, config, wandb_session, vocoder, melspec_predict, log_type="train")
     scheduler.step()
     return losses
 
@@ -74,9 +80,12 @@ def train_epoch(
 def validation(
         model, loader,
         loss_fn, featurizer, aligner,
-        config=TaskConfig(), wandb_session=None
+        config=TaskConfig(), wandb_session=None,
+        vocoder=None
 ):
     model.eval()
+    melspec_predict = None
+    batch = None
 
     duration_losses, melspec_losses = [], []
     val_losses = []
@@ -107,6 +116,8 @@ def validation(
                 "val.melspec_loss": melspec_loss.detach().cpu().numpy(),
                 "vall.loss": loss.detach().cpu().numpy()
             })
+    if vocoder is not None and melspec_predict is not None:
+        log_wandb_audio(batch, config, wandb_session, vocoder, melspec_predict, log_type="val")
 
     return duration_losses, melspec_losses, val_losses
 
@@ -122,11 +133,12 @@ def train(
     best_loss = -1.
     for n in range(config.num_epochs):
         if config.log_audio and n % config.laep == 0:
+            print("logging aufio")
             train_losses = train_epoch(
                 model, opt, train_loader, scheduler,
                 Loss(), featurizer, aligner,
                 config, wandb_session,
-                vocoder, n)
+                vocoder)
             train_loss = sum(train_losses) / len(train_losses)
 
         else:
@@ -143,12 +155,13 @@ def train(
             model_path = config.work_dir + "/models/" + "model_epoch"
             torch.save(model.state_dict(), model_path)
 
-
-        duration_losses, melspec_losses, val_losses = validation(
-            model, val_loader,
-            Loss(), featurizer, aligner,
-            config, wandb_session
-        )
+        if n % config.laep_val == 0:
+            validation(
+                model, val_loader,
+                Loss(), featurizer, aligner,
+                config, wandb_session,
+                vocoder
+            )
 
         print('------\nEND OF EPOCH', n, "\n------")
     if save_model:

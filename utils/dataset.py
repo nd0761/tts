@@ -9,9 +9,39 @@ from typing import Tuple, Optional, List
 from torch.nn.utils.rnn import pad_sequence
 from dataclasses import dataclass
 
+import re
+
 import pandas as pd
 
 from utils.config import TaskConfig
+
+
+class TestDataset:
+    def __init__(self, file_path):
+        super().__init__()
+        with open(file_path, 'r') as f:
+            self.lines = f.readlines()
+        self.lines_len = len(self.lines)
+        self._tokenizer = torchaudio.pipelines.TACOTRON2_GRIFFINLIM_CHAR_LJSPEECH.get_text_processor()
+
+    def __getitem__(self, index: int):
+        transcript = re.sub(r"[^a-zA-Z ,.]+", "", self.lines[index])
+        tokens, token_lengths = self._tokenizer(transcript)
+
+        return transcript, tokens, token_lengths
+
+    def __len__(self):
+        return self.lines_len
+
+    def decode(self, tokens, lengths):
+        result = []
+        for tokens_, length in zip(tokens, lengths):
+            text = "".join([
+                self._tokenizer.tokens[token]
+                for token in tokens_[:length]
+            ])
+            result.append(text)
+        return result
 
 
 class LJSpeechDataset(torchaudio.datasets.LJSPEECH):
@@ -27,6 +57,9 @@ class LJSpeechDataset(torchaudio.datasets.LJSPEECH):
         tokens, token_lengths = self._tokenizer(transcript)
 
         return waveform, waveform_length, transcript, tokens, token_lengths
+
+    def __len__(self):
+        return len(self.sentences)
 
     def decode(self, tokens, lengths):
         result = []

@@ -9,7 +9,7 @@ from utils.config import TaskConfig
 from train import train
 from utils.model import FastSpeech
 from utils.featurizer import MelSpectrogramConfig, MelSpectrogram
-from utils.dataset import LJSpeechDataset, LJSpeechCollator
+from utils.dataset import LJSpeechDataset, LJSpeechCollator, TestDataset
 from utils.aligner import GraphemeAligner
 from utils.vcoder import Vocoder
 
@@ -27,29 +27,22 @@ def main_worker():
     torch.manual_seed(config.torch_seed)
 
     print("initialize dataset")
-    dataset = list(LJSpeechDataset(config.work_dir_LJ))
-
-    assert config.train_share > 0 or config.train_limit != -1, "check config"
-    if config.train_share > 0:
-        train_limit = len(dataset) * config.train_share
-        train_dataset = dataset[:train_limit]
-        validation_dataset = dataset[train_limit:]
-    else:
-        train_limit = config.train_limit * config.batch_size
-        train_dataset = dataset[:train_limit]
-        validation_dataset = dataset[train_limit:]
-
+    train_dataset = LJSpeechDataset(config.work_dir_LJ)
 
     train_loader = DataLoader(
         train_dataset,
         batch_size=config.batch_size,
         collate_fn=LJSpeechCollator()
     )
-    val_loader = DataLoader(
-        validation_dataset,
+    test_dataset = TestDataset(config.work_dir + "/test_text.txt")
+
+    test_loader = DataLoader(
+        test_dataset,
         batch_size=config.batch_size,
         collate_fn=LJSpeechCollator()
     )
+
+    val_loader = []
 
     print("initialize model")
     model = FastSpeech()
@@ -73,7 +66,8 @@ def main_worker():
     wandb_session = wandb.init(project="tts-one-batch", entity="nd0761")
     wandb.config = config.__dict__
 
-    # train_loader = [next(iter(dataloader))]
+    # if config.one_batch:
+    #     train_loader = [next(iter(train_loader))]
     # val_loader = copy.deepcopy(train_loader)
 
     print("start train procedure")
@@ -84,7 +78,7 @@ def main_worker():
         vocoder = Vocoder().to(config.device).eval()
 
     train(
-        model, opt, scheduler, train_loader, val_loader,
+        model, opt, scheduler, train_loader, test_loader,
         featurizer, aligner,
         save_model=False, model_path=None,
         config=config, wandb_session=wandb_session,
