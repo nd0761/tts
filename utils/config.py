@@ -4,7 +4,10 @@ import dataclasses
 
 @dataclasses.dataclass
 class TaskConfig:
-    work_dir: str = "/content/"  # because we work with colab
+    work_dir: str = "/home/jupyter/work/resources/tts"  # because we work with ds
+    work_dir_LJ: str = "/home/jupyter/mnt/s3/bucket-hse-rw/data/datasets"  # because we work with ds
+    model_path: str = "/home/jupyter/work/resources/models"
+
     one_batch: bool = True
     PAD_IDX: int = 0
 
@@ -41,6 +44,15 @@ class TaskConfig:
 
     batch_size: int = 3
 
+    train_share: float = -1.
+
+    train_limit: int = 1
+    val_limit: int = 1
+
+    train_limit: int = 1
+    val_limit: int = 1
+
+
     learning_rate: float = 3e-4
     weight_decay: float = 1e-5
 
@@ -50,5 +62,6 @@ class TaskConfig:
     wandb_api: str = "99f2c4dae0db3099861ebd92a63e1194f42d16d9"
     log_audio: bool = True
     laep: int = 100
+    laep_model: int = 100
     log_final_audio: bool = True
     wandb: bool = True

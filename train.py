@@ -20,6 +20,8 @@ def train_epoch(
     model.train()
     melspec_predict = None
     batch = None
+
+    losses = []
     for i, batch in tqdm(enumerate(loader), total=len(loader)):
         batch = batch.to(config.device)
 
@@ -40,6 +42,7 @@ def train_epoch(
             melspec, melspec_predict
         )
         loss = duration_loss + melspec_loss
+        losses.append(loss.detach().cpu().numpy()[0])
 
         loss.backward()
         opt.step()
@@ -64,6 +67,7 @@ def train_epoch(
             "train.transcript": wandb.Html(batch.transcript[0]),
         })
     scheduler.step()
+    return losses
 
 
 @torch.no_grad()
@@ -115,18 +119,30 @@ def train(
         save_model=False, model_path=None,
         config=TaskConfig(), wandb_session=None
 ):
-    for n in range(TaskConfig.num_epochs):
+    best_loss = -1.
+    for n in range(config.num_epochs):
         if config.log_audio and n % config.laep == 0:
-            train_epoch(
+            train_losses = train_epoch(
                 model, opt, train_loader, scheduler,
                 Loss(), featurizer, aligner,
                 config, wandb_session,
                 vocoder, n)
+            train_loss = sum(train_losses) / len(train_losses)
+
         else:
-            train_epoch(
+            train_losses = train_epoch(
                 model, opt, train_loader, scheduler,
                 Loss(), featurizer, aligner,
                 config, wandb_session)
+            train_loss = sum(train_losses) / len(train_losses)
+        if best_loss < 0 or train_loss < best_loss:
+            best_loss = train_loss
+            best_model_path = config.work_dir + "/models/" + "best_model"
+            torch.save(model.state_dict(), best_model_path)
+        if n % config.laep_model == 0:
+            model_path = config.work_dir + "/models/" + "model_epoch"
+            torch.save(model.state_dict(), model_path)
+
 
         duration_losses, melspec_losses, val_losses = validation(
             model, val_loader,
@@ -134,6 +150,6 @@ def train(
             config, wandb_session
         )
 
-        print('END OF EPOCH', n)
+        print('------\nEND OF EPOCH', n, "\n------")
     if save_model:
         torch.save(model.state_dict(), model_path)

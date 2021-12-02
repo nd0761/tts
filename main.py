@@ -21,15 +21,32 @@ from torch.optim.lr_scheduler import ExponentialLR
 from IPython import display
 
 
-def main_worker(model_path):
+def main_worker():
     print("set torch seed")
     config = TaskConfig()
     torch.manual_seed(config.torch_seed)
 
     print("initialize dataset")
-    dataset = LJSpeechDataset(config.work_dir)
-    dataloader = DataLoader(
-        dataset,
+    dataset = list(LJSpeechDataset(config.work_dir_LJ))
+
+    assert config.train_share > 0 or config.train_limit != -1, "check config"
+    if config.train_share > 0:
+        train_limit = len(dataset) * config.train_share
+        train_dataset = dataset[:train_limit]
+        validation_dataset = dataset[train_limit:]
+    else:
+        train_limit = config.train_limit * config.batch_size
+        train_dataset = dataset[:train_limit]
+        validation_dataset = dataset[train_limit:]
+
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=config.batch_size,
+        collate_fn=LJSpeechCollator()
+    )
+    val_loader = DataLoader(
+        validation_dataset,
         batch_size=config.batch_size,
         collate_fn=LJSpeechCollator()
     )
@@ -52,12 +69,12 @@ def main_worker(model_path):
     scheduler = ExponentialLR(opt, 1.0)
 
     print("initialize wandb")
-    os.environ["WANDB_API_KEY"] = config.wandb_api
+    # os.environ["WANDB_API_KEY"] = config.wandb_api
     wandb_session = wandb.init(project="tts-one-batch", entity="nd0761")
     wandb.config = config.__dict__
 
-    train_loader = [next(iter(dataloader))]
-    val_loader = copy.deepcopy(train_loader)
+    # train_loader = [next(iter(dataloader))]
+    # val_loader = copy.deepcopy(train_loader)
 
     print("start train procedure")
 
@@ -113,4 +130,4 @@ def main_worker(model_path):
 
 
 if __name__ == "__main__":
-    main_worker(sys.argv[1])
+    main_worker()
