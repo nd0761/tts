@@ -1,5 +1,6 @@
 import sys
 import torch
+import torch.nn as nn
 import os
 import wandb
 import copy
@@ -28,6 +29,9 @@ def main_worker():
 
     print("initialize dataset")
     train_dataset = LJSpeechDataset(config.work_dir_LJ)
+    if config.batch_limit != -1:
+        train_limit = config.batch_limit * config.batch_size
+        train_dataset = list(train_dataset)[:train_limit]
 
     train_loader = DataLoader(
         train_dataset,
@@ -45,7 +49,8 @@ def main_worker():
     val_loader = []
 
     print("initialize model")
-    model = FastSpeech()
+    # model = FastSpeech()
+    model = nn.DataParallel(FastSpeech()).to(config.device)
     model.to(config.device)
 
     print("initialize featurizer")
@@ -84,41 +89,6 @@ def main_worker():
         config=config, wandb_session=wandb_session,
         vocoder=vocoder
     )
-
-    if not config.log_final_audio:
-        wandb_session.finish()
-        return
-    print("send result to wandb")
-    if vocoder is None:
-        print("initialize vocoder")
-        vocoder = Vocoder().to(config.device).eval()
-    with torch.no_grad():
-        model.eval()
-        for batch in train_loader:
-            batch = batch.to(config.device)
-            melspec = featurizer(batch.waveform)
-            with torch.no_grad():
-                batch.durations = aligner(
-                    batch.waveform,
-                    batch.waveform_length,
-                    batch.transcript
-                ).to(config.device)
-            mel_lengths = batch.get_real_durations().to(config.device).unsqueeze(1)
-
-            # mel_lengths = mel_lengths.expand(mel_lengths.shape[0], batch.durations.shape[-1])
-            batch.real_durations = torch.mul(batch.durations, mel_lengths)
-
-            duration_predict, melspec_predict = model(batch, melspec)
-
-            for i in range(melspec_predict.shape[0]):
-                reconstructed_wav = vocoder.inference(melspec_predict[i].unsqueeze(0)).cpu()
-                wav = display.Audio(reconstructed_wav, rate=22050)
-                tmp_path = config.work_dir + "temp" + str(i) + ".wav"
-                log_audio(wandb_session, wav, tmp_path, "result.audio", False)
-                wandb_session.log({
-                    "result.transcript": wandb.Html(batch.transcript[i])
-                })
-                i += 1
 
     wandb_session.finish()
 

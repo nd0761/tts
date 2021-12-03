@@ -35,7 +35,7 @@ def train_epoch(
     batch = None
 
     losses = []
-    for i, batch in tqdm(enumerate(loader)):
+    for i, batch in tqdm(enumerate(loader), position=0, leave=True):
         if config.batch_limit != -1 and i >= config.batch_limit:
             break
         batch = batch.to(config.device)
