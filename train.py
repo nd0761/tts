@@ -11,7 +11,8 @@ from tqdm import tqdm
 from IPython import display
 
 
-def log_wandb_audio(batch, config, wandb_session, vocoder, melspec_predict, log_type="train", ground_truth=True):
+def log_wandb_audio(batch, config, wandb_session, vocoder, melspec_predict, transcript, log_type="train",
+                    ground_truth=True):
     reconstructed_wav = vocoder.inference(melspec_predict).cpu()
     wav = display.Audio(reconstructed_wav, rate=22050)
     tmp_path = config.work_dir + "temp.wav"
@@ -20,7 +21,7 @@ def log_wandb_audio(batch, config, wandb_session, vocoder, melspec_predict, log_
         gt_wav = display.Audio(batch.waveform[0].cpu(), rate=22050)
         log_audio(wandb_session, gt_wav, tmp_path, log_type + ".audio_original")
     wandb_session.log({
-        log_type + ".transcript": wandb.Html(batch.transcript[0]),
+        log_type + ".transcript": wandb.Html(transcript),
     })
 
 
@@ -35,9 +36,9 @@ def train_epoch(
     batch = None
 
     losses = []
-    for i, batch in tqdm(enumerate(loader), position=0, leave=True):
-        if config.batch_limit != -1 and i >= config.batch_limit:
-            break
+    for i, batch in tqdm(enumerate(loader), total=len(loader)):
+        #         if config.batch_limit != -1 and i >= config.batch_limit:
+        #             break
         batch = batch.to(config.device)
 
         melspec = featurizer(batch.waveform)
@@ -61,19 +62,29 @@ def train_epoch(
 
         loss.backward()
         opt.step()
+        scheduler.step()
+        #         print("LAST LR")
+        #         print(scheduler.get_last_lr())
+        #         print(scheduler.get_last_lr()[0])
+        #         print("---")
 
         # logging
-        if config.wandb:
+
+        if i % config.laep == 0 and config.wandb:
+            a = scheduler.get_last_lr()[0]
+            wandb_session.log({
+                "learning_rate": a
+            })
             wandb_session.log({
                 "train.duration_loss": duration_loss.detach().cpu().numpy(),
                 "train.melspec_loss": melspec_loss.detach().cpu().numpy(),
                 "train.loss": loss.detach().cpu().numpy()
             })
-        if config.one_batch:
-            break
-    if vocoder is not None and melspec_predict is not None:
-        log_wandb_audio(batch, config, wandb_session, vocoder, melspec_predict[0].unsqueeze(0), log_type="train")
-    scheduler.step()
+        if i % config.laep == 0 and vocoder is not None and melspec_predict is not None:
+            log_wandb_audio(batch, config, wandb_session, vocoder, melspec_predict[0].unsqueeze(0), batch.transcript[0],
+                            log_type="train")
+    #         if config.one_batch:
+    #             break
     return losses
 
 
@@ -90,28 +101,16 @@ def validation(
 
     duration_losses, melspec_losses = [], []
     val_losses = []
-    for i, batch in tqdm(enumerate(loader)):
+    for i, batch in tqdm(enumerate(loader), total=len(loader)):
         batch.tokens = batch.tokens.to(config.device)
         batch.token_lengths = batch.token_lengths.to(config.device)
 
         duration_predict, melspec_predict = model(batch)
 
-        # duration_loss, melspec_loss = loss_fn(
-        #     batch.real_durations, duration_predict,
-        #     melspec, melspec_predict
-        # )
-        # loss = duration_loss + melspec_loss
-        #
-        # # logging
-        # if config.wandb:
-        #     wandb_session.log({
-        #         "val.duration_loss": duration_loss.detach().cpu().numpy(),
-        #         "val.melspec_loss": melspec_loss.detach().cpu().numpy(),
-        #         "vall.loss": loss.detach().cpu().numpy()
-        #     })
     if vocoder is not None and melspec_predict is not None:
-        for melspec, log_type in zip(melspec_predict, ["test1", "test2", "test3"]):
-            log_wandb_audio(batch, config, wandb_session, vocoder, melspec.unsqueeze(0), log_type=log_type, ground_truth=False)
+        for melspec, transcript, log_type in zip(melspec_predict, batch.transcript, ["test1", "test2", "test3"]):
+            log_wandb_audio(batch, config, wandb_session, vocoder, melspec.unsqueeze(0), transcript, log_type=log_type,
+                            ground_truth=False)
 
     return duration_losses, melspec_losses, val_losses
 
@@ -126,22 +125,17 @@ def train(
 ):
     best_loss = -1.
     for n in range(config.num_epochs):
-        if config.log_audio and n % config.laep == 0:
-            train_losses = train_epoch(
-                model, opt, train_loader, scheduler,
-                Loss(), featurizer, aligner,
-                config, wandb_session,
-                vocoder)
-            train_loss = sum(train_losses) / len(train_losses)
-
-        else:
-            train_losses = train_epoch(
-                model, opt, train_loader, scheduler,
-                Loss(), featurizer, aligner,
-                config, wandb_session)
-            train_loss = sum(train_losses) / len(train_losses)
+        #         if config.log_audio and n % config.laep == 0:
+        train_losses = train_epoch(
+            model, opt, train_loader, scheduler,
+            Loss(), featurizer, aligner,
+            config, wandb_session,
+            vocoder)
+        train_loss = sum(train_losses) / len(train_losses)
+        print("TRAIN LOSS", train_loss)
 
         if best_loss < 0 or train_loss < best_loss:
+            print("UPDATING BEST MODEL, NEW BEST TRAIN_LOSS:", train_loss)
             best_loss = train_loss
             best_model_path = config.work_dir + "/models/" + "best_model"
             torch.save(model.state_dict(), best_model_path)

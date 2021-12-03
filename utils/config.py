@@ -8,7 +8,7 @@ class TaskConfig:
     work_dir_LJ: str = "/home/jupyter/mnt/s3/bucket-hse-rw/data/datasets"  # because we work with ds
     model_path: str = "/home/jupyter/work/resources/models"
 
-    one_batch: bool = True
+    one_batch: bool = False
     PAD_IDX: int = 0
 
     vocab_size: int = 10000
@@ -42,19 +42,19 @@ class TaskConfig:
 
     torch_seed: int = 42
 
-    batch_size: int = 1
+    batch_size: int = 3
 
-    batch_limit: int = 1
+    batch_limit: int = -1
 
-    learning_rate: float = 3e-4
+    learning_rate: float = 4e-4
     weight_decay: float = 1e-5
 
-    num_epochs: int = 100
+    num_epochs: int = 750
     device: torch.device = torch.device(
         'cuda:0' if torch.cuda.is_available() else 'cpu')
     wandb_api: str = "99f2c4dae0db3099861ebd92a63e1194f42d16d9"
     log_audio: bool = True
-    laep: int = 1
+    laep: int = 107
     laep_model: int = 1
     laep_val: int = 1
     log_final_audio: bool = True

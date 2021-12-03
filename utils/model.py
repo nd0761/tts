@@ -36,6 +36,7 @@ class FastSpeech(nn.Module):
         x = self.encoder(batch.tokens)
         # print(batch.get_real_durations())
         # print(batch.durations)
+
         x, lengths = self.length_regulator(x, batch.real_durations)
         x = self.decoder(x)
 

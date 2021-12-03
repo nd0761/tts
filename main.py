@@ -7,31 +7,36 @@ import copy
 
 from utils.config import TaskConfig
 
-from train import train
+from train import train, train_epoch, validation
 from utils.model import FastSpeech
 from utils.featurizer import MelSpectrogramConfig, MelSpectrogram
 from utils.dataset import LJSpeechDataset, LJSpeechCollator, TestDataset, TestCollator
 from utils.aligner import GraphemeAligner
 from utils.vcoder import Vocoder
+from utils.loss import Loss
 
 from utils.wandb_audio import log_audio
 
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import ExponentialLR
+from torch.optim.lr_scheduler import ExponentialLR, OneCycleLR
 from IPython import display
 
 
 def main_worker():
     print("set torch seed")
     config = TaskConfig()
+    print(config.device)
     torch.manual_seed(config.torch_seed)
 
     print("initialize dataset")
     train_dataset = LJSpeechDataset(config.work_dir_LJ)
-    if config.batch_limit != -1:
-        train_limit = config.batch_limit * config.batch_size
-        train_dataset = list(train_dataset)[:train_limit]
+    #     if config.batch_limit != -1:
+    #         train_limit = config.batch_limit * config.batch_size
+    #         print("train_limit", train_limit)
+    #         train_dataset = list(train_dataset)[:train_limit]
+
+    print("initialize dataloader")
 
     train_loader = DataLoader(
         train_dataset,
@@ -42,11 +47,12 @@ def main_worker():
 
     test_loader = DataLoader(
         test_dataset,
-        batch_size=config.batch_size,
+        batch_size=3,
         collate_fn=TestCollator()
     )
 
     val_loader = []
+    print("Train size:", len(train_dataset), len(train_loader))
 
     print("initialize model")
     # model = FastSpeech()
@@ -61,14 +67,27 @@ def main_worker():
     opt = AdamW(
         model.parameters(),
         lr=config.learning_rate,
-        weight_decay=config.weight_decay
+        weight_decay=config.weight_decay,
+        betas=(0.9, 0.98), eps=1e-9
     )
     print("initialize scheduler")
-    scheduler = ExponentialLR(opt, 1.0)
+    #     scheduler = ExponentialLR(opt, 1.0)
+    if config.batch_limit != -1:
+        scheduler = OneCycleLR(opt, steps_per_epoch=config.batch_limit,
+                               epochs=config.num_epochs + 1,
+                               max_lr=config.learning_rate,
+                               pct_start=0.1
+                               )
+    else:
+        scheduler = OneCycleLR(opt, steps_per_epoch=len(train_loader),
+                               epochs=config.num_epochs + 1,
+                               max_lr=config.learning_rate,
+                               pct_start=0.1
+                               )
 
     print("initialize wandb")
     # os.environ["WANDB_API_KEY"] = config.wandb_api
-    wandb_session = wandb.init(project="tts-one-batch-1", entity="nd0761")
+    wandb_session = wandb.init(project="tts-final", entity="nd0761")
     wandb.config = config.__dict__
 
     # if config.one_batch:
@@ -89,8 +108,6 @@ def main_worker():
         config=config, wandb_session=wandb_session,
         vocoder=vocoder
     )
-
-    wandb_session.finish()
 
 
 if __name__ == "__main__":
