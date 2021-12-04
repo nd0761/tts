@@ -28,7 +28,7 @@ class Decoder(nn.Module):
         # batch_size, max_len = phonem.shape[0], phonem.shape[1]
 
         # x = phonem + self.position_enc[:, :max_len, :].expand(batch_size, -1, -1)
-        x = mel + self.pos_enc(mel)
+        x = mel + self.pos_enc(mel.transpose(0, 1)).transpose(0, 1)
         out = self.FFTs(x)
 
         return out

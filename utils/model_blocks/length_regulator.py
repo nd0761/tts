@@ -32,14 +32,15 @@ class LengthRegulator(nn.Module):
 
         return output
 
-    def forward(self, x, target=None):
+    def forward(self, x, target=None, log_target=None):
         alpha = 1.0,
         predicted_len = self.duration_pred(x)
 
         if target is not None:
             target = target
         else:
-            target = predicted_len
+            target = torch.exp(predicted_len)
+            log_target = predicted_len
         output = self.LR(x, target).transpose(-2, -1)
 
         return output, predicted_len

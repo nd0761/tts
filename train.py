@@ -47,11 +47,13 @@ def train_epoch(
 
         mel_lengths = batch.get_real_durations().to(config.device).unsqueeze(1)
 
-        # mel_lengths = mel_lengths.expand(mel_lengths.shape[0], batch.durations.shape[-1])
         batch.real_durations = torch.mul(batch.durations, mel_lengths)
+        batch.log_real_durations = torch.log(batch.real_durations + 1. * batch.real_durations.eq(0).float())
 
         opt.zero_grad()
         duration_predict, melspec_predict = model(batch, melspec)
+
+
 
         duration_loss, melspec_loss = loss_fn(
             batch.real_durations, duration_predict,
@@ -63,12 +65,6 @@ def train_epoch(
         loss.backward()
         opt.step()
         scheduler.step()
-        #         print("LAST LR")
-        #         print(scheduler.get_last_lr())
-        #         print(scheduler.get_last_lr()[0])
-        #         print("---")
-
-        # logging
 
         if i % config.laep == 0 and config.wandb:
             a = scheduler.get_last_lr()[0]
