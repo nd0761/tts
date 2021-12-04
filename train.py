@@ -134,11 +134,11 @@ def train(
         if best_loss < 0 or train_loss < best_loss:
             print("UPDATING BEST MODEL, NEW BEST TRAIN_LOSS:", train_loss)
             best_loss = train_loss
-        #     best_model_path = config.work_dir + "/models/" + "best_model"
-        #     torch.save(model.state_dict(), best_model_path)
-        # if n % config.laep_model == 0:
-        #     model_path = config.work_dir + "/models/" + "model_epoch"
-        #     torch.save(model.state_dict(), model_path)
+            best_model_path = config.work_dir + "/models/" + "best_model"
+            torch.save(model.state_dict(), best_model_path)
+        if n % config.laep_model == 0:
+            model_path = config.work_dir + "/models/" + "model_epoch"
+            torch.save(model.state_dict(), model_path)
 
         if n % config.laep_val == 0:
             validation(
