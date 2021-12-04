@@ -53,10 +53,8 @@ def train_epoch(
         opt.zero_grad()
         duration_predict, melspec_predict = model(batch, melspec)
 
-
-
         duration_loss, melspec_loss = loss_fn(
-            batch.real_durations, duration_predict,
+            batch.log_real_durations, duration_predict,
             melspec, melspec_predict
         )
         loss = duration_loss + melspec_loss
