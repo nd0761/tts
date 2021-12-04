@@ -47,7 +47,7 @@ def main_worker():
 
     test_loader = DataLoader(
         test_dataset,
-        batch_size=3,
+        batch_size=len(test_dataset),
         collate_fn=TestCollator()
     )
 

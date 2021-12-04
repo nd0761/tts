@@ -108,7 +108,8 @@ def validation(
         duration_predict, melspec_predict = model(batch)
 
     if vocoder is not None and melspec_predict is not None:
-        for melspec, transcript, log_type in zip(melspec_predict, batch.transcript, ["test1", "test2", "test3"]):
+        test_names = ["test" + str(i + 1) for i in range(len(melspec_predict))]
+        for melspec, transcript, log_type in zip(melspec_predict, batch.transcript, test_names):
             log_wandb_audio(batch, config, wandb_session, vocoder, melspec.unsqueeze(0), transcript, log_type=log_type,
                             ground_truth=False)
 
