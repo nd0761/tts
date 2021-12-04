@@ -48,8 +48,9 @@ def train_epoch(
 
             mel_lengths = batch.get_real_durations().to(config.device).unsqueeze(1)
 
-            batch.real_durations = torch.mul(batch.durations, mel_lengths)
-        batch.log_real_durations = torch.log(batch.real_durations + 1. * batch.real_durations.eq(0).float())
+            batch.real_durations = torch.mul(batch.durations, mel_lengths).to(config.device)
+        batch.real_durations = batch.real_durations.to(config.device)
+        batch.log_real_durations = torch.log(batch.real_durations + 1. * batch.real_durations.eq(0).float()).to(config.device)
 
         opt.zero_grad()
         duration_predict, melspec_predict = model(batch, melspec)
@@ -133,11 +134,11 @@ def train(
         if best_loss < 0 or train_loss < best_loss:
             print("UPDATING BEST MODEL, NEW BEST TRAIN_LOSS:", train_loss)
             best_loss = train_loss
-            best_model_path = config.work_dir + "/models/" + "best_model"
-            torch.save(model.state_dict(), best_model_path)
-        if n % config.laep_model == 0:
-            model_path = config.work_dir + "/models/" + "model_epoch"
-            torch.save(model.state_dict(), model_path)
+        #     best_model_path = config.work_dir + "/models/" + "best_model"
+        #     torch.save(model.state_dict(), best_model_path)
+        # if n % config.laep_model == 0:
+        #     model_path = config.work_dir + "/models/" + "model_epoch"
+        #     torch.save(model.state_dict(), model_path)
 
         if n % config.laep_val == 0:
             validation(

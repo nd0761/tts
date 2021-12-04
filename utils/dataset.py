@@ -128,7 +128,7 @@ class LJSpeechCollator:
 class TestCollator:
 
     def __call__(self, instances: List[Tuple]) -> Batch:
-        _, _, transcript, tokens, token_lengths, _ = list(
+        _, _, transcript, tokens, token_lengths = list(
             zip(*instances)
         )
 

@@ -93,7 +93,7 @@ def main_worker():
 
     print("initialize wandb")
     # os.environ["WANDB_API_KEY"] = config.wandb_api
-    wandb_session = wandb.init(project="tts-final", entity="nd0761")
+    wandb_session = wandb.init(project=config.wandb_project, entity="nd0761")
     wandb.config = config.__dict__
 
     # if config.one_batch:
