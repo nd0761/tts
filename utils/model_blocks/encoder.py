@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from utils.model_blocks.fftblock import FFTBlock
+from utils.model_blocks.positional_encoding import PositionalEncoding
 from utils.config import TaskConfig
 
 
@@ -11,6 +12,7 @@ class Encoder(nn.Module):
         self.phonem_emb = nn.Embedding(
             config.vocab_size, config.phonems_emb
         )
+        self.pos_enc = PositionalEncoding(config.phonems_emb)
         # self.position_enc = nn.Embedding(config.phonems + 1, config.encoder_pos_emb, config.PAD_IDX).unsqueeze(0)
 
         cur_dim = config.encoder_hidden_self_attention
@@ -30,6 +32,7 @@ class Encoder(nn.Module):
 
         # x = self.phonem_emb(phonem) + self.position_enc[:, :max_len, :].expand(batch_size, -1, -1)
         phonem_emb = self.phonem_emb(phonem)
-        out = self.FFTs(phonem_emb)
+        x = phonem_emb + self.pos_enc(phonem.transpose(0, 1))
+        out = self.FFTs(x)
 
         return out

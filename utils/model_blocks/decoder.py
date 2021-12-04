@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from utils.model_blocks.fftblock import FFTBlock
+from utils.model_blocks.positional_encoding import PositionalEncoding
 from utils.config import TaskConfig
 
 
@@ -11,6 +12,7 @@ class Decoder(nn.Module):
         # self.position_enc = nn.Embedding(n_position, config.decoder_pos_emb, config.PAD_IDX).unsqueeze(0)
 
         cur_dim = config.decoder_hidden_self_attention
+        self.pos_enc = PositionalEncoding(cur_dim)
         self.FFTs = nn.Sequential(
             *[
                 FFTBlock(
@@ -26,6 +28,7 @@ class Decoder(nn.Module):
         # batch_size, max_len = phonem.shape[0], phonem.shape[1]
 
         # x = phonem + self.position_enc[:, :max_len, :].expand(batch_size, -1, -1)
-        out = self.FFTs(mel)
+        x = mel + self.pos_enc(mel)
+        out = self.FFTs(x)
 
         return out
