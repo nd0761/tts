@@ -11,7 +11,7 @@ from train import train, train_epoch, validation
 from utils.model import FastSpeech
 from utils.featurizer import MelSpectrogramConfig, MelSpectrogram
 from utils.dataset import LJSpeechDataset, LJSpeechCollator, TestDataset, TestCollator
-from utils.aligner import GraphemeAligner
+from utils.aligner import GraphemeAligner, FsAligner
 from utils.vcoder import Vocoder
 from utils.loss import Loss
 
@@ -61,8 +61,14 @@ def main_worker():
 
     print("initialize featurizer")
     featurizer = MelSpectrogram(MelSpectrogramConfig()).to(config.device)
-    print("initialize aligner")
-    aligner = GraphemeAligner().to(config.device).to(config.device)
+    print("initialize aligner:", config.aligner)
+    if config.aligner == "ga":
+        aligner = GraphemeAligner().to(config.device).to(config.device)
+    elif config.aligner == "fsa":
+        aligner = FsAligner().to(config.device).to(config.device)
+    else:
+        print("Unknown aligner")
+        return
     print("initialize optimizer")
     opt = AdamW(
         model.parameters(),

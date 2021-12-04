@@ -9,6 +9,9 @@ from torch.nn.utils.rnn import pad_sequence
 from dataclasses import dataclass
 from torch.utils.data import Dataset
 
+from utils.config import TaskConfig
+from utils.aligner import GraphemeAligner, FsAligner
+
 import re
 
 import pandas as pd
@@ -48,6 +51,9 @@ class LJSpeechDataset(torchaudio.datasets.LJSPEECH):
     def __init__(self, root):
         super().__init__(root=root)
         self._tokenizer = torchaudio.pipelines.TACOTRON2_GRIFFINLIM_CHAR_LJSPEECH.get_text_processor()
+        self.aligner = None
+        if TaskConfig().aligner == "fsa":
+            self.aligner = FsAligner()
 
     def __getitem__(self, index: int):
         waveform, _, _, transcript = super().__getitem__(index)
@@ -57,7 +63,11 @@ class LJSpeechDataset(torchaudio.datasets.LJSPEECH):
 
         tokens, token_lengths = self._tokenizer(transcript)
 
-        return waveform, waveform_length, transcript, tokens, token_lengths
+        alignment = None
+        if self.aligner is not None:
+            alignment = self.aligner(index)
+
+        return waveform, waveform_length, transcript, tokens, token_lengths, alignment
 
     def decode(self, tokens, lengths):
         result = []
@@ -94,7 +104,7 @@ class Batch:
 class LJSpeechCollator:
 
     def __call__(self, instances: List[Tuple]) -> Batch:
-        waveform, waveform_length, transcript, tokens, token_lengths = list(
+        waveform, waveform_length, transcript, tokens, token_lengths, real_durations = list(
             zip(*instances)
         )
 
@@ -108,13 +118,17 @@ class LJSpeechCollator:
         ]).transpose(0, 1)
         token_lengths = torch.cat(token_lengths)
 
-        return Batch(waveform, waveform_length, transcript, tokens, token_lengths)
+        real_durations = pad_sequence(real_durations).transpose(0, 1)
+        return Batch(
+            waveform, waveform_length, transcript, tokens,
+            token_lengths, durations=real_durations, real_durations=real_durations
+        )
 
 
 class TestCollator:
 
     def __call__(self, instances: List[Tuple]) -> Batch:
-        _, _, transcript, tokens, token_lengths = list(
+        _, _, transcript, tokens, token_lengths, _ = list(
             zip(*instances)
         )
 

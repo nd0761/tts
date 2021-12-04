@@ -32,7 +32,7 @@ class Encoder(nn.Module):
 
         # x = self.phonem_emb(phonem) + self.position_enc[:, :max_len, :].expand(batch_size, -1, -1)
         phonem_emb = self.phonem_emb(phonem)
-        x = phonem_emb + self.pos_enc(phonem.transpose(0, 1)).transpose(0, 1)
+        x = phonem_emb + self.pos_enc(phonem_emb.transpose(0, 1)).transpose(0, 1)
         out = self.FFTs(x)
 
         return out

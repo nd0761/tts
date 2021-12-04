@@ -8,6 +8,8 @@ class TaskConfig:
     work_dir_LJ: str = "/home/jupyter/mnt/s3/bucket-hse-rw/data/datasets"  # because we work with ds
     model_path: str = "/home/jupyter/work/resources/models"
 
+    aligner: str = "fsa"
+
     one_batch: bool = False
     PAD_IDX: int = 0
 

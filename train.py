@@ -37,17 +37,18 @@ def train_epoch(
 
     losses = []
     for i, batch in tqdm(enumerate(loader), total=len(loader)):
-        #         if config.batch_limit != -1 and i >= config.batch_limit:
-        #             break
+        if config.batch_limit != -1 and i >= config.batch_limit:
+            break
         batch = batch.to(config.device)
 
         melspec = featurizer(batch.waveform)
-        with torch.no_grad():
-            batch.durations = aligner(batch.waveform, batch.waveform_length, batch.transcript).to(config.device)
+        if batch.durations is None:
+            with torch.no_grad():
+                batch.durations = aligner(batch.waveform, batch.waveform_length, batch.transcript).to(config.device)
 
-        mel_lengths = batch.get_real_durations().to(config.device).unsqueeze(1)
+            mel_lengths = batch.get_real_durations().to(config.device).unsqueeze(1)
 
-        batch.real_durations = torch.mul(batch.durations, mel_lengths)
+            batch.real_durations = torch.mul(batch.durations, mel_lengths)
         batch.log_real_durations = torch.log(batch.real_durations + 1. * batch.real_durations.eq(0).float())
 
         opt.zero_grad()

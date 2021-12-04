@@ -2,9 +2,14 @@ from dataclasses import dataclass
 from torch import nn
 import torch
 
+import numpy as np
+import os
+
 import torchaudio
 from typing import List, Union
 from torch.nn.utils.rnn import pad_sequence
+
+from utils.config import TaskConfig
 
 import matplotlib.pyplot as plt
 
@@ -169,3 +174,16 @@ class GraphemeAligner(nn.Module):
         for i, p in enumerate(path):
             trellis_with_path[p.time_index, p.token_index] = float('nan')
         plt.imshow(trellis_with_path[1:, 1:].T, origin='lower')
+
+#alignments source: https://github.com/xcmyz/FastSpeech/blob/master/alignments.zip
+class FsAligner(nn.Module):
+
+    def __init__(self):
+        super(FsAligner, self).__init__()
+
+        self.alignments_path = TaskConfig().work_dir + "/alignments"
+
+    @torch.no_grad()
+    def forward(self, index):
+        alignment_path = os.path.join(self.alignments_path, str(index) + ".npy")
+        return torch.from_numpy(np.load(alignment_path))
