@@ -19,6 +19,26 @@ import pandas as pd
 from utils.config import TaskConfig
 
 
+def fix_tokens(text):
+    dict_replace = {"Mr.": "Mister", "Hon.": "Honorable", "St.": "Saint",
+                    "Mrs.": "Misess", "Dr.": "Doctor", "Lt.": "Lieutenant",
+                    "Co.": "Company", "Jr.": "junior", "Maj.": "Major", "Drs.": "Doctors",
+                    "Gen.": "General", "Rev.": "Reverned", "Sgt.": "Sergeant", "Capt.": "Captain",
+                    "Esq.": "Esquire", "Ltd.": "Limited", "Col.": "Colonel", "Ft.": "Fort"
+                   }
+    keys_to_remove = ["“", "”", "[", "]", '"']
+    non_ascii_chars = [char for char in "âàêéèǖǘüǚǜ’"]
+    ascii_chars = [char for char in "aaeeeuuuu'"]
+    for key in dict_replace:
+        value = dict_replace[key]
+        text = text.replace(key, value)
+    for key_to_remove in keys_to_remove:
+        text = text.replace(key_to_remove, '')
+    for non_ascii_char, ascii_char in zip(non_ascii_chars, ascii_chars):
+        text = text.replace(non_ascii_char, ascii_char)
+    return text
+
+
 class TestDataset(Dataset):
     def __init__(self, file_path):
         super().__init__()
@@ -28,7 +48,9 @@ class TestDataset(Dataset):
         self._tokenizer = torchaudio.pipelines.TACOTRON2_GRIFFINLIM_CHAR_LJSPEECH.get_text_processor()
 
     def __getitem__(self, index: int):
-        transcript = re.sub(r"[^a-zA-Z ,.]+", "", self.lines[index])
+        transcript = self.lines[index]
+        # transcript = re.sub(r"[^a-zA-Z ,.]+", "", self.lines[index])
+        transcript = fix_tokens(transcript)
         tokens, token_lengths = self._tokenizer(transcript)
         return None, None, transcript, tokens, token_lengths
 
@@ -59,7 +81,8 @@ class LJSpeechDataset(torchaudio.datasets.LJSPEECH):
         waveform, _, _, transcript = super().__getitem__(index)
         waveform_length = torch.tensor([waveform.shape[-1]]).int()
 
-        transcript = re.sub(r"[^a-zA-Z ,.]+", "", transcript)
+        # transcript = re.sub(r"[^a-zA-Z ,.]+", "", transcript)
+        transcript = fix_tokens(transcript)
 
         tokens, token_lengths = self._tokenizer(transcript)
 
